@@ -1,4 +1,6 @@
-//var ICON_SEARCH = "\u1F50D" // search icon doesn't work on duktape...
+// How to work with non-BMP characters
+// https://github.com/svaarala/duktape-wiki/blob/add-nonbmp-howto/HowtoNonBmpCharacters.md
+var ICON_SEARCH = Duktape.dec('jx', '"\\U0001f50d"');
 var ICON_CIRCLED_CROSS = "\u2716"
 var ICON_CHEVRON_RIGHT = "\uE75E"
 var ICON_CHECK = "\u2713"
@@ -228,12 +230,11 @@ function drawSearchBox(vg, text, x, y, w, h)
 	vg.boxGradient(x,y+1.5, w,h, h/2,5, 0,0,0,16, 0,0,0,92);
 	vg.fill();
 
-  // @fixme { How to represent ICON_SEARCH UTF-8 value in duktape? }
-	//vg.fontSize(h*1.3);
-	//vg.fontFace("icons");
-	//vg.fillColor(255,255,255,64);
-	//vg.textAlign(vg.ALIGN_CENTER|vg.ALIGN_MIDDLE);
-	//vg.text(x+h*0.55, y+h*0.55, ICON_SEARCH);
+	vg.fontSize(h*1.3);
+	vg.fontFace("icons");
+	vg.fillColor(255,255,255,64);
+	vg.textAlign(vg.ALIGN_CENTER|vg.ALIGN_MIDDLE);
+	vg.text(x+h*0.55, y+h*0.55, ICON_SEARCH);
 
 	vg.fontSize(20.0);
 	vg.fontFace("sans");
