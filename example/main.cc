@@ -14,6 +14,297 @@
 
 NVGcontext* vg;
 
+#if 0 // not used yet
+#define USE_ATOF
+
+#define IS_SPACE(x) (((x) == ' ') || ((x) == '\t'))
+#define IS_DIGIT(x) \
+  (static_cast<unsigned int>((x) - '0') < static_cast<unsigned int>(10))
+
+// [0, 255] -> [0.0, 1.0]
+static inline float itof(int i)
+{
+  if (i < 0) i = 0;
+  if (i > 255) i = 255;
+
+  return i / 255.0f;
+}
+
+// Tries to parse a floating point number located at s.
+//
+// s_end should be a location in the string where reading should absolutely
+// stop. For example at the end of the string, to prevent buffer overflows.
+//
+// Parses the following EBNF grammar:
+//   sign    = "+" | "-" ;
+//   END     = ? anything not in digit ?
+//   digit   = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+//   integer = [sign] , digit , {digit} ;
+//   decimal = integer , ["." , integer] ;
+//   float   = ( decimal , END ) | ( decimal , ("E" | "e") , integer , END ) ;
+//
+//  Valid strings are for example:
+//   -0  +3.1417e+2  -0.0E-3  1.0324  -1.41   11e2
+//
+// If the parsing is a success, result is set to the parsed value and true
+// is returned.
+//
+// The function is greedy and will parse until any of the following happens:
+//  - a non-conforming character is encountered.
+//  - s_end is reached.
+//
+// The following situations triggers a failure:
+//  - s >= s_end.
+//  - parse failure.
+//
+static bool tryParseDouble(const char *s, const char *s_end, double *result) {
+  if (s >= s_end) {
+    return false;
+  }
+
+  double mantissa = 0.0;
+  // This exponent is base 2 rather than 10.
+  // However the exponent we parse is supposed to be one of ten,
+  // thus we must take care to convert the exponent/and or the
+  // mantissa to a * 2^E, where a is the mantissa and E is the
+  // exponent.
+  // To get the final double we will use ldexp, it requires the
+  // exponent to be in base 2.
+  int exponent = 0;
+
+  // NOTE: THESE MUST BE DECLARED HERE SINCE WE ARE NOT ALLOWED
+  // TO JUMP OVER DEFINITIONS.
+  char sign = '+';
+  char exp_sign = '+';
+  char const *curr = s;
+
+  // How many characters were read in a loop.
+  int read = 0;
+  // Tells whether a loop terminated due to reaching s_end.
+  bool end_not_reached = false;
+
+  /*
+          BEGIN PARSING.
+  */
+
+  // Find out what sign we've got.
+  if (*curr == '+' || *curr == '-') {
+    sign = *curr;
+    curr++;
+  } else if (IS_DIGIT(*curr)) { /* Pass through. */
+  } else {
+    goto fail;
+  }
+
+  // Read the integer part.
+  end_not_reached = (curr != s_end);
+  while (end_not_reached && IS_DIGIT(*curr)) {
+    mantissa *= 10;
+    mantissa += static_cast<int>(*curr - 0x30);
+    curr++;
+    read++;
+    end_not_reached = (curr != s_end);
+  }
+
+  // We must make sure we actually got something.
+  if (read == 0) goto fail;
+  // We allow numbers of form "#", "###" etc.
+  if (!end_not_reached) goto assemble;
+
+  // Read the decimal part.
+  if (*curr == '.') {
+    curr++;
+    read = 1;
+    end_not_reached = (curr != s_end);
+    while (end_not_reached && IS_DIGIT(*curr)) {
+      // NOTE: Don't use powf here, it will absolutely murder precision.
+      mantissa += static_cast<int>(*curr - 0x30) * pow(10.0, -read);
+      read++;
+      curr++;
+      end_not_reached = (curr != s_end);
+    }
+  } else if (*curr == 'e' || *curr == 'E') {
+  } else {
+    goto assemble;
+  }
+
+  if (!end_not_reached) goto assemble;
+
+  // Read the exponent part.
+  if (*curr == 'e' || *curr == 'E') {
+    curr++;
+    // Figure out if a sign is present and if it is.
+    end_not_reached = (curr != s_end);
+    if (end_not_reached && (*curr == '+' || *curr == '-')) {
+      exp_sign = *curr;
+      curr++;
+    } else if (IS_DIGIT(*curr)) { /* Pass through. */
+    } else {
+      // Empty E is not allowed.
+      goto fail;
+    }
+
+    read = 0;
+    end_not_reached = (curr != s_end);
+    while (end_not_reached && IS_DIGIT(*curr)) {
+      exponent *= 10;
+      exponent += static_cast<int>(*curr - 0x30);
+      curr++;
+      read++;
+      end_not_reached = (curr != s_end);
+    }
+    exponent *= (exp_sign == '+' ? 1 : -1);
+    if (read == 0) goto fail;
+  }
+
+assemble:
+  *result =
+      (sign == '+' ? 1 : -1) * ldexp(mantissa * pow(5.0, exponent), exponent);
+  return true;
+fail:
+  return false;
+}
+
+
+static inline float parseFloat(const char **token) {
+  (*token) += strspn((*token), " \t");
+  // Behavior of atof() is affected by C locale setting, so we use custom float parser.
+  const char *end = (*token) + strcspn((*token), " \t\r");
+  double val = 0.0;
+  tryParseDouble((*token), end, &val);
+  float f = static_cast<float>(val);
+  (*token) = end;
+  return f;
+}
+
+static inline int parseHex(const char **token) {
+  char x0 = (*token)[0];
+  char x1 = (*token)[1];
+
+  unsigned char x = 0;
+  if ((x0 >= 'a') && ((x0 <= 'f'))) {
+    x += (x0 - 'a') << 4;
+  } else if ((x0 >= 'A') && ((x0 <= 'F'))) {
+    x += (x0 - 'A') << 4;
+  }
+    
+  if ((x1 >= 'a') && ((x1 <= 'f'))) {
+    x += (x1 - 'a');
+  } else if ((x1 >= 'A') && ((x1 <= 'F'))) {
+    x += (x1 - 'A');
+  }
+
+  return x;
+}
+
+static inline int parseInt(const char **token) {
+  (*token) += strspn((*token), " \t");
+  int i = atoi((*token));
+  return i;
+}
+
+static inline void consumeComma(const char **token) {
+  (*token) += strcspn((*token), ",");
+  (*token)++;
+  return;
+}
+
+static inline void consumeClosingParenthesis(const char **token) {
+  (*token) += strcspn((*token), ")");
+  (*token)++;
+  return;
+}
+
+static inline bool parsePercent(const char **token) {
+  (*token) += strspn((*token), " \t");
+  bool ret = false;
+  if ((*token) && ((*token)[0]) == ',') {
+    (*token)++;
+    ret = true;
+  }
+  (*token) += strcspn((*token), " \t\r");
+  return ret;
+}
+
+bool parseColor(float rgba[4], std::string s)
+{
+  const char* token = s.c_str();
+
+  // @todo { parse error check. }
+
+  // Supported patterns.
+  // rgb(INT,INT,INT)
+  // rgba(INT,INT,INT,FLOAT)
+  // hsl(INT,INT%,INT%)
+  // hsla(INT,INT%,INT%,FLOAT)
+  // #ffffff (hexvalue)
+  // 
+  if (strncmp(token, "rgb(", strlen("rgb(")) == 0) {
+    token += strlen("rgb(");
+    int r = parseInt(&token);
+    consumeComma(&token);
+    int g = parseInt(&token);
+    consumeComma(&token);
+    int b = parseInt(&token);
+    consumeClosingParenthesis(&token);
+
+    rgba[0] = itof(r);
+    rgba[1] = itof(g);
+    rgba[2] = itof(b);
+    rgba[3] = 1.0f;
+    return true;
+  } else if (strcmp(token, "rgba(") == 0) {
+    token += strlen("rgba(");
+
+    int r = parseInt(&token);
+    consumeComma(&token);
+    int g = parseInt(&token);
+    consumeComma(&token);
+    int b = parseInt(&token);
+    consumeComma(&token);
+    float a = parseFloat(&token);
+    consumeClosingParenthesis(&token);
+
+    rgba[0] = itof(r);
+    rgba[1] = itof(g);
+    rgba[2] = itof(b);
+    rgba[3] = a;
+
+    return true;
+  } else if (strcmp(token, "hsl(") == 0) {
+    token += strlen("hsl(");
+    // @todo
+    assert(0);
+    return false;
+  } else if (strcmp(token, "hsla(") == 0) {
+    token += strlen("hsla(");
+    // @todo
+    assert(0);
+    return false;
+  } else if (strcmp(token, "#") == 0) {
+    token += 1; // '#'
+
+    int r = parseHex(&token);
+    token += 2;
+    int g = parseHex(&token);
+    token += 2;
+    int b = parseHex(&token);
+    token += 2;
+
+    rgba[0] = itof(r);
+    rgba[1] = itof(g);
+    rgba[2] = itof(b);
+    rgba[3] = 1.0f;
+
+    return true;
+  } else {
+    // Unknown color string.
+  }
+
+  return false;
+}
+#endif
+
 unsigned char fclamp(float x)
 {
   int i = (int)x;
@@ -28,17 +319,20 @@ void fatal_function(duk_context *ctx, duk_errcode_t code, const char *msg)
 {
   printf("FATAL: %d\n", code);
   printf("FATAL: %s\n", msg);
+  (void)ctx;
   exit(-1);
 }
 
 duk_ret_t beginPath(duk_context *ctx)
 {
+  (void)ctx;
   nvgBeginPath(vg);
   return 0;
 }
 
 duk_ret_t closePath(duk_context *ctx)
 {
+  (void)ctx;
   nvgClosePath(vg);
   return 0;
 }
@@ -109,7 +403,6 @@ duk_ret_t arc(duk_context *ctx)
 
 duk_ret_t fillColor(duk_context *ctx)
 {
-  // Assume 0~255
   float r = duk_require_number(ctx, 0);
   float g = duk_require_number(ctx, 1);
   float b = duk_require_number(ctx, 2);
@@ -121,6 +414,7 @@ duk_ret_t fillColor(duk_context *ctx)
 
 duk_ret_t stroke(duk_context *ctx)
 {
+  (void)ctx;
   nvgStroke(vg);
   return 0;
 }
@@ -219,6 +513,7 @@ duk_ret_t radialGradient(duk_context *ctx)
 
 duk_ret_t fill(duk_context *ctx)
 {
+  (void)ctx;
   nvgFill(vg);
   return 0;
 }
@@ -427,12 +722,14 @@ duk_ret_t imagePattern(duk_context *ctx)
 
 duk_ret_t save(duk_context *ctx)
 {
+  (void)ctx;
   nvgSave(vg);
   return 0;
 }
 
 duk_ret_t restore(duk_context *ctx)
 {
+  (void)ctx;
   nvgRestore(vg);
   return 0;
 }
@@ -458,6 +755,7 @@ duk_ret_t intersectScissor(duk_context *ctx)
 
 duk_ret_t resetScissor(duk_context *ctx)
 {
+  (void)ctx;
   nvgResetScissor(vg);
 
   return 0;
@@ -465,6 +763,7 @@ duk_ret_t resetScissor(duk_context *ctx)
 
 duk_ret_t onClick(duk_context *ctx)
 {
+  (void)ctx;
   printf("On click\n");
   return 0;
 }
@@ -555,6 +854,8 @@ void keyboardFunc(GLFWwindow *window, int key, int scancode, int action, int mod
       glfwSetWindowShouldClose(window, GL_TRUE);
     }
   }
+  (void)scancode;
+  (void)mods;
 }
 
 std::string ReadJSFile(const char* filename)
@@ -566,22 +867,41 @@ std::string ReadJSFile(const char* filename)
 
   f.seekg(0, f.end);
   size_t sz = f.tellg();
-  std::vector<char> buf(sz);
+  std::vector<char> buf(sz+1);
 
   f.seekg(0, f.beg);
   f.read(&buf.at(0), sz);
   f.close();
 
+  buf[sz] = '\0';
+
   return std::string(&buf.at(0));
 }
 
+//void tests()
+//{
+//  float rgba[4];
+//  std::string s = "rgb(64, 255, 128)";
+//  bool ret = parseColor(rgba, s);
+//  if (!ret) {
+//    printf("parse err\n");
+//    exit(-1);
+//  }
+//  printf("rgba = %f, %f, %f, %f\n", rgba[0], rgba[1], rgba[2], rgba[3]);
+//}
+
 int main(int argc, char** argv)
 {
-
   int width = 1024;
   int height = 600;
 
-  std::string js = ReadJSFile("../example/input.js");
+  std::string filename = "../example/input.js";
+  if (argc > 1) {
+    filename = std::string(argv[1]);
+  }
+    
+
+  std::string js = ReadJSFile(filename.c_str());
   printf("js = %s\n", js.c_str());
 
   PerfGraph fps;
@@ -664,7 +984,6 @@ int main(int argc, char** argv)
   duk_put_function_list(ctx, -1, my_module_funcs);
   duk_put_prop_string(ctx, -2, "prototype");
   duk_put_global_string(ctx, "NanoVG");  /* -> [ ... global ] */
-  //duk_pop(ctx);
 
 #if 0
   const duk_function_list_entry my_event_funcs[] = {
@@ -682,7 +1001,10 @@ int main(int argc, char** argv)
   decode_test(ctx);
 #endif
 
-  duk_peval_string(ctx, js.c_str());
+  if (duk_peval_string(ctx, js.c_str()) != 0) {
+    printf("eval failed: %s\n", duk_safe_to_string(ctx, -1));
+    exit(-1);
+  }
 
   duk_push_global_object(ctx);
   duk_get_prop_string(ctx, -1 /*index*/, "onInit");
