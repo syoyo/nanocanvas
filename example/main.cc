@@ -1013,7 +1013,7 @@ int main(int argc, char** argv)
   ci.m_height = height;
   window->createWindow(ci);
 
-  window->setWindowTitle("view");
+  window->setWindowTitle("NanoCanvas");
 
 #ifndef __APPLE__
 #ifndef _WIN32

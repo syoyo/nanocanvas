@@ -3,3 +3,5 @@
 * NanoCanvas : MIT License
 * Duktape : MIT License http://duktape.org/
 * NanoVG : zlib License https://github.com/memononen/nanovg
+* bt3gui : zlib License https://github.com/bulletphysics/bullet3/blob/master/LICENSE.txt
+* Glew : The source code is licensed under the Modified BSD License, the Mesa 3-D License (MIT) and the Khronos License (MIT). https://github.com/nigels-com/glew#copyright-and-licensing

@@ -9,29 +9,45 @@ NanoCanvas is build on top of Duktape, NanoVG and OpenGL2(or GLESv2).
 ## Platform
 
 * Mac OS X
-* Linux(TODO)
-* Windows(TODO)
+* Linux
+* Windows
 * iOS/Android(TODO)
 
 ## Requirements
 
 * OpenGL2
   * GLESv2
-* premake4
-* glfw3
-* glew
+* premake5
 
 ## Build
 
 ### Linux and MacOSX
 
-    $ premake4 gmake
+    $ premake5 gmake
     $ cd build
     $ make
+
+### Windows
+
+Visual Studio 2015 is required to build an example.
+
+    > premake5.exe vs2015
+    > cd build
+
+Open solution file and build it with Visual Studio 2015.
+
+Visual Studio 2013 may work. To compile with Visual Studio 2013 use the following premake flag.
+
+    > premake5.exe vs2013
 
 ## Example
 
 See `example/main.cc` and `example/input.js`.
+
+## License
+
+NanoCanvas example code is licensed under MIT license.
+NanoCanvas uses third party libraries. See `LICENSES` file for more details.
 
 ## TODO
 

@@ -2,7 +2,7 @@
 local action = _ACTION or ""
 
 solution "nanocanvas"
-   projectRootDir = os.getcwd() .. "/example"
+   projectRootDir = os.getcwd() .. "/example/"
    dofile ("example/findOpenGLGlewGlut.lua")
    initOpenGL()
    initGlew()
