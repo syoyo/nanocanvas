@@ -8,7 +8,7 @@ NanoCanvas is build on top of Duktape, NanoVG and OpenGL2(or GLESv2).
 ## Platform
 
 * Mac OS X
-* Linux(TODO)
+* Linux
 * Windows(TODO)
 * iOS/Android(TODO)
 
@@ -16,15 +16,13 @@ NanoCanvas is build on top of Duktape, NanoVG and OpenGL2(or GLESv2).
 
 * OpenGL2
   * GLESv2
-* premake4
-* glfw3
-* glew
+* premake5
 
 ## Build
 
 ### Linux and MacOSX
 
-    $ premake4 gmake
+    $ premake5 gmake
     $ cd build
     $ make
 
