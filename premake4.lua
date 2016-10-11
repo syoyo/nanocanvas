@@ -2,6 +2,11 @@
 local action = _ACTION or ""
 
 solution "nanocanvas"
+   projectRootDir = os.getcwd() .. "/example"
+   dofile ("example/findOpenGLGlewGlut.lua")
+   initOpenGL()
+   initGlew()
+
 	location ( "build" )
 	configurations { "Debug", "Release" }
 	platforms {"native", "x64", "x32"}
@@ -32,19 +37,30 @@ solution "nanocanvas"
 		links { "nanocanvas" }
 
 		configuration { "linux" }
-			 linkoptions { "`pkg-config --libs glfw3`" }
-			 links { "GL", "GLU", "m", "GLEW" }
-			 defines { "NANOVG_GLEW" }
+         files {
+            "example/OpenGLWindow/X11OpenGLWindow.cpp",
+            "example/OpenGLWindow/X11OpenGLWindows.h"
+            }
+         links {"X11", "pthread", "dl"}
 
 		configuration { "windows" }
-			 links { "glfw3", "gdi32", "winmm", "user32", "GLEW", "glu32","opengl32", "kernel32" }
-			 defines { "NANOVG_GLEW", "_CRT_SECURE_NO_WARNINGS" }
+         defines { "NOMINMAX" }
+         buildoptions { "/W4" } -- raise compile error level.
+         files{
+            "example/OpenGLWindow/Win32OpenGLWindow.cpp",
+            "example/OpenGLWindow/Win32OpenGLWindow.h",
+            "example/OpenGLWindow/Win32Window.cpp",
+            "example/OpenGLWindow/Win32Window.h",
+            }
 
 		configuration { "macosx" }
-         includedirs { "/usr/local/include" }
-         libdirs { "/usr/local/lib" }
-			links { "glfw3" }
-			linkoptions { "-framework OpenGL", "-framework Cocoa", "-framework IOKit", "-framework CoreVideo" }
+			buildoptions { "-fsanitize=address" }
+			linkoptions { "-fsanitize=address" }
+         links {"Cocoa.framework"}
+         files {
+                "example/OpenGLWindow/MacOpenGLWindow.h",
+                "example/OpenGLWindow/MacOpenGLWindow.mm",
+               }
 
 		configuration "Debug"
 			defines { "DEBUG" }

@@ -1,4 +1,14 @@
-#include <GLFW/glfw3.h>
+#define USE_OPENGL2
+#include "OpenGLWindow/OpenGLInclude.h"
+#ifdef _WIN32
+#include "OpenGLWindow/Win32OpenGLWindow.h"
+#elif defined __APPLE__
+#include "OpenGLWindow/MacOpenGLWindow.h"
+#else
+// assume linux
+#include "OpenGLWindow/X11OpenGLWindow.h"
+#endif
+
 #include "nanovg.h"
 #define NANOVG_GL2_IMPLEMENTATION
 #include "nanovg_gl.h"
@@ -13,6 +23,81 @@
 #include <vector>
 
 NVGcontext* vg;
+b3gDefaultOpenGLWindow *window = 0;
+
+#ifdef _WIN32
+#ifdef __cplusplus
+extern "C" {
+#endif
+#	include <windows.h>
+#	include <mmsystem.h>
+#ifdef __cplusplus
+}
+#endif
+#pragma comment( lib, "winmm.lib" )
+#else
+#if defined(__unix__) || defined(__APPLE__)
+#		include <sys/time.h>
+#	else
+#		include <ctime>
+#	endif
+#endif
+	
+class timer{
+	public:
+#ifdef _WIN32
+		typedef DWORD time_t;
+		
+		timer() {::timeBeginPeriod( 1 );}
+		~timer(){::timeEndPeriod(1);}
+			
+		void start(){t_[0] = ::timeGetTime();}
+		void end()  {t_[1] = ::timeGetTime();}
+				
+		time_t sec() {return (time_t)( (t_[1]-t_[0]) / 1000 );}
+		time_t msec(){return (time_t)( (t_[1]-t_[0]) );}
+		time_t usec(){return (time_t)( (t_[1]-t_[0]) * 1000 );}
+		
+#else 
+#if defined(__unix__) || defined(__APPLE__)
+		typedef unsigned long int time_t;
+
+		
+		void start(){gettimeofday(tv+0, &tz);}
+		void end()  {gettimeofday(tv+1, &tz);}
+		
+		time_t sec() {return (time_t)(tv[1].tv_sec-tv[0].tv_sec);}
+		time_t msec(){return this->sec()*1000 + (time_t)((tv[1].tv_usec-tv[0].tv_usec)/1000);}
+		time_t usec(){return this->sec()*1000000 + (time_t)(tv[1].tv_usec-tv[0].tv_usec);}
+
+#else //C timer
+		//using namespace std;
+		typedef clock_t time_t;
+		
+		void start(){t_[0] = clock();}
+		void end()  {t_[1] = clock();}
+		
+		time_t sec() {return (time_t)( (t_[1]-t_[0]) / CLOCKS_PER_SEC );}
+		time_t msec(){return (time_t)( (t_[1]-t_[0]) * 1000 / CLOCKS_PER_SEC );}
+		time_t usec(){return (time_t)( (t_[1]-t_[0]) * 1000000 / CLOCKS_PER_SEC );}
+	
+#endif
+#endif
+		
+	private:
+		
+#ifdef _WIN32
+		DWORD t_[2];
+#else
+#if defined(__unix__) || defined(__APPLE__)
+		struct timeval tv[2];
+		struct timezone tz;
+#else
+		time_t t_[2];
+#endif
+#endif
+		
+};
 
 #if 0 // not used yet
 #define USE_ATOF
@@ -848,14 +933,26 @@ void decode_test(duk_context* ctx)
   duk_set_top(ctx, 0);
 }
 
-void keyboardFunc(GLFWwindow *window, int key, int scancode, int action, int mods) {
-  if(action == GLFW_PRESS || action == GLFW_REPEAT){
-    if(key == GLFW_KEY_Q || key == GLFW_KEY_ESCAPE) {
-      glfwSetWindowShouldClose(window, GL_TRUE);
+void keyboardCallback(int keycode, int state) {
+  printf("hello key %d, state %d(ctrl %d)\n", keycode, state,
+         window->isModifierKeyPressed(B3G_CONTROL));
+  // if (keycode == 'q' && window && window->isModifierKeyPressed(B3G_SHIFT)) {
+  if (keycode == 27) {
+    if (window)
+      window->setRequestExit();
+  } else if (keycode == 9) { // Tab
+    //gTabPressed = (state == 1);
+  } else if (keycode == B3G_SHIFT) { // Shift
+    //gShiftPressed = (state == 1);
+  }
+
+  //ImGui_ImplBtGui_SetKeyState(keycode, (state == 1));
+
+  if (keycode >= 32 && keycode <= 126) {
+    if (state == 1) {
+      //ImGui_ImplBtGui_SetChar(keycode);
     }
   }
-  (void)scancode;
-  (void)mods;
 }
 
 std::string ReadJSFile(const char* filename)
@@ -907,26 +1004,34 @@ int main(int argc, char** argv)
   PerfGraph fps;
   initGraph(&fps, GRAPH_RENDER_FPS, "Frame Time");
 
-  GLFWwindow* window;
+  window = new b3gDefaultOpenGLWindow;
+  b3gWindowConstructionInfo ci;
+#ifdef USE_OPENGL2
+  ci.m_openglVersion = 2;
+#endif
+  ci.m_width = width;
+  ci.m_height = height;
+  window->createWindow(ci);
 
-  if (!glfwInit()) {
-    printf("Failed to init GLFW.");
-    return -1;
+  window->setWindowTitle("view");
+
+#ifndef __APPLE__
+#ifndef _WIN32
+  // some Linux implementations need the 'glewExperimental' to be true
+  glewExperimental = GL_TRUE;
+#endif
+  if (glewInit() != GLEW_OK) {
+    fprintf(stderr, "Failed to initialize GLEW\n");
+    exit(-1);
   }
 
-
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-
-  window = glfwCreateWindow(width, height, "NanoCanvas", NULL, NULL);
-  if (!window) {
-    glfwTerminate();
-    return -1;
+  if (!GLEW_VERSION_2_1) {
+    fprintf(stderr, "OpenGL 2.1 is not available\n");
+    exit(-1);
   }
+#endif
 
-  glfwSetKeyCallback(window, keyboardFunc);
-
-  glfwMakeContextCurrent(window);
+  window->setKeyboardCallback(keyboardCallback);
 
   vg = nvgCreateGL2(NVG_ANTIALIAS | NVG_STENCIL_STROKES | NVG_DEBUG);
 
@@ -1013,17 +1118,21 @@ int main(int argc, char** argv)
   }
   duk_pop(ctx);  /* pop result/error */
 
-  glfwSwapInterval(0);
-  glfwSetTime(0);
-  double prevt = 0.0;
-  prevt = glfwGetTime();
+  timer tm;
 
-  while (!glfwWindowShouldClose(window))
-  {
+  tm.start();
+  double prevt = 0.0;
+  tm.end();
+  prevt = tm.msec() / 1000.0; // [s]
+
+  while (!window->requestedExit()) {
+    window->startRendering();
 
     double t, dt;
 
-    t = glfwGetTime();
+    tm.end();
+    t = tm.msec() / 1000.0; // [s]
+    
     dt = t - prevt;
     prevt = t;
     updateGraph(&fps, dt);
@@ -1049,8 +1158,7 @@ int main(int argc, char** argv)
 
     nvgEndFrame(vg);
 
-    glfwSwapBuffers(window);
-    glfwPollEvents();
+    window->endRendering();
   }
 
   duk_push_global_object(ctx);
@@ -1066,7 +1174,7 @@ int main(int argc, char** argv)
 
   nvgDeleteGL2(vg);
 
-  glfwTerminate();
+  delete window;
 
   return 0;
 }
