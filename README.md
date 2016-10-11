@@ -2,6 +2,7 @@
 
 ![](images/screenshot.png)
 ![](images/screenshot-win.jpg)
+![](images/screenshot-linux.png)
 
 NanoCanvas is a portable vector graphics engine using JavaScript binding of NanoVG.
 NanoCanvas is build on top of Duktape, NanoVG and OpenGL2(or GLESv2).
