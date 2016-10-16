@@ -42,7 +42,13 @@ extern "C" {
 #		include <ctime>
 #	endif
 #endif
-	
+
+bool mouse_btn = false;
+int mouse_btn_button = 0;
+int mouse_btn_state = 0;
+float mouse_btn_x = 0.0;
+float mouse_btn_y = 0.0;
+
 class timer{
 	public:
 #ifdef _WIN32
@@ -406,6 +412,14 @@ void fatal_function(duk_context *ctx, duk_errcode_t code, const char *msg)
   printf("FATAL: %s\n", msg);
   (void)ctx;
   exit(-1);
+}
+
+void checkErrors(const char *desc) {
+  GLenum e = glGetError();
+  if (e != GL_NO_ERROR) {
+    fprintf(stderr, "OpenGL error in \"%s\": %d (%d)\n", desc, e, e);
+    exit(20);
+  }
 }
 
 duk_ret_t beginPath(duk_context *ctx)
@@ -955,6 +969,20 @@ void keyboardCallback(int keycode, int state) {
   }
 }
 
+void mouseButtonCallback(int button, int state, float x, float y) {
+  printf("hello mouse: button: %d, state: %d, x: %.2f, y: %.2f\n", button, state, x, y);
+  
+  mouse_btn = true;
+  mouse_btn_button = button;
+  mouse_btn_state = state;
+  mouse_btn_x = x;
+  mouse_btn_y = y;
+}
+
+void mouseMoveCallback(float x, float y) {
+  printf("mouse move, x: %.2f, y: %.2f\n", x, y);
+}
+
 std::string ReadJSFile(const char* filename)
 {
   std::ifstream f(filename, std::ifstream::binary);
@@ -1031,7 +1059,11 @@ int main(int argc, char** argv)
   }
 #endif
 
+  window->setMouseButtonCallback(mouseButtonCallback);
+  window->setMouseMoveCallback(mouseMoveCallback);
+  checkErrors("mouse");
   window->setKeyboardCallback(keyboardCallback);
+  checkErrors("keyboard");
 
   vg = nvgCreateGL2(NVG_ANTIALIAS | NVG_STENCIL_STROKES | NVG_DEBUG);
 
@@ -1153,6 +1185,19 @@ int main(int argc, char** argv)
     }
     duk_pop(ctx);  /* pop result/error */
 
+    if (mouse_btn) {
+      duk_push_global_object(ctx);
+      duk_get_prop_string(ctx, -1 /*index*/, "onClick");
+      duk_push_number(ctx, mouse_btn_button);
+      duk_push_number(ctx, mouse_btn_state);
+      duk_push_number(ctx, mouse_btn_x);
+      duk_push_number(ctx, mouse_btn_y);
+      if (duk_pcall(ctx, 4 /*nargs*/) != 0) {
+          printf("Error: %s\n", duk_safe_to_string(ctx, -1));
+      }
+      duk_pop(ctx);  /* pop result/error */
+      mouse_btn = false;
+    }
 
     renderGraph(vg, 5,5, &fps);
 
