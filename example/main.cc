@@ -408,6 +408,14 @@ void fatal_function(duk_context *ctx, duk_errcode_t code, const char *msg)
   exit(-1);
 }
 
+void checkErrors(const char *desc) {
+  GLenum e = glGetError();
+  if (e != GL_NO_ERROR) {
+    fprintf(stderr, "OpenGL error in \"%s\": %d (%d)\n", desc, e, e);
+    exit(20);
+  }
+}
+
 duk_ret_t beginPath(duk_context *ctx)
 {
   (void)ctx;
@@ -955,8 +963,12 @@ void keyboardCallback(int keycode, int state) {
   }
 }
 
-void mouseCallback(int button, int state, float x, float y) {
-  printf("hello mouse: button: %d, state: %d, x: %.2f, y: %.2f", button, state, x, y);
+void mouseButtonCallback(int button, int state, float x, float y) {
+  printf("hello mouse: button: %d, state: %d, x: %.2f, y: %.2f\n", button, state, x, y);
+}
+
+void mouseMoveCallback(float x, float y) {
+  printf("mouse move, x: %.2f, y: %.2f\n", x, y);
 }
 
 std::string ReadJSFile(const char* filename)
@@ -1035,8 +1047,11 @@ int main(int argc, char** argv)
   }
 #endif
 
+  window->setMouseButtonCallback(mouseButtonCallback);
+  window->setMouseMoveCallback(mouseMoveCallback);
+  checkErrors("mouse");
   window->setKeyboardCallback(keyboardCallback);
-  window->setMouseButtonCallback(mouseCallback);
+  checkErrors("keyboard");
 
   vg = nvgCreateGL2(NVG_ANTIALIAS | NVG_STENCIL_STROKES | NVG_DEBUG);
 
