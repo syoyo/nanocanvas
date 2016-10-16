@@ -42,7 +42,13 @@ extern "C" {
 #		include <ctime>
 #	endif
 #endif
-	
+
+bool mouse_btn = false;
+int mouse_btn_button = 0;
+int mouse_btn_state = 0;
+float mouse_btn_x = 0.0;
+float mouse_btn_y = 0.0;
+
 class timer{
 	public:
 #ifdef _WIN32
@@ -965,6 +971,12 @@ void keyboardCallback(int keycode, int state) {
 
 void mouseButtonCallback(int button, int state, float x, float y) {
   printf("hello mouse: button: %d, state: %d, x: %.2f, y: %.2f\n", button, state, x, y);
+  
+  mouse_btn = true;
+  mouse_btn_button = button;
+  mouse_btn_state = state;
+  mouse_btn_x = x;
+  mouse_btn_y = y;
 }
 
 void mouseMoveCallback(float x, float y) {
@@ -1173,6 +1185,19 @@ int main(int argc, char** argv)
     }
     duk_pop(ctx);  /* pop result/error */
 
+    if (mouse_btn) {
+      duk_push_global_object(ctx);
+      duk_get_prop_string(ctx, -1 /*index*/, "onClick");
+      duk_push_number(ctx, mouse_btn_button);
+      duk_push_number(ctx, mouse_btn_state);
+      duk_push_number(ctx, mouse_btn_x);
+      duk_push_number(ctx, mouse_btn_y);
+      if (duk_pcall(ctx, 4 /*nargs*/) != 0) {
+          printf("Error: %s\n", duk_safe_to_string(ctx, -1));
+      }
+      duk_pop(ctx);  /* pop result/error */
+      mouse_btn = false;
+    }
 
     renderGraph(vg, 5,5, &fps);
 

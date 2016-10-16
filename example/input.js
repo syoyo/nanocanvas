@@ -921,6 +921,7 @@ function drawScissor(vg, x, y, t)
 var VG = undefined;
 var gImages = [];
 var t = 0.0;
+var click_toggle = false;
 
 function onInit() {
   try {
@@ -945,6 +946,13 @@ function onQuit() {
   }
 }
 
+var STATE_UP = 0;
+var STATE_DOWN = 1;
+function onClick(btn, state, x, y) {
+  if (state == STATE_UP)
+    click_toggle = !click_toggle;
+}
+
 function onDraw() {
 
   try {
@@ -958,20 +966,22 @@ function onDraw() {
     t = t + 0.02;
     var x, y, popy;
 
-    drawEyes(vg, width - 250, 50, 150, 100, 0, 0, t);
-    drawGraph(vg, 0, height/2, width, height/2, t);
-    drawColorwheel(vg, width - 300, height - 300, 250, 250, t);
+    if (!click_toggle) {
+      drawEyes(vg, width - 250, 50, 150, 100, 0, 0, t);
+      drawGraph(vg, 0, height/2, width, height/2, t);
+      drawColorwheel(vg, width - 300, height - 300, 250, 250, t);
 
-    // Line joints
-    drawLines(vg, 120, height-50, 600, 50, t);
+      // Line joints
+      drawLines(vg, 120, height-50, 600, 50, t);
 
-    // Line caps
-    drawWidths(vg, 10, 50, 30);
+      // Line caps
+      drawWidths(vg, 10, 50, 30);
 
-    // Line caps
-    drawCaps(vg, 10, 300, 30);
+      // Line caps
+      drawCaps(vg, 10, 300, 30);
 
-    drawScissor(vg, 50, height-80, t);
+      drawScissor(vg, 50, height-80, t);
+    }
 
     vg.save();
 
