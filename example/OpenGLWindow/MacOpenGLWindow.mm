@@ -874,7 +874,7 @@ void MacOpenGLWindow::startRendering()
 
         if (([event type]== NSRightMouseDown) || ([ event type]==NSLeftMouseDown)||([event type]==NSOtherMouseDown))
         {
-           // printf("right mouse!");
+           printf("right mouse!");
           //  float mouseX,mouseY;
             
             NSPoint eventLocation = [event locationInWindow];
@@ -904,7 +904,7 @@ void MacOpenGLWindow::startRendering()
                 
                 }
             };
-           // printf("mouse coord = %f, %f\n",mouseX,mouseY);
+           printf("mouse coord = %f, %f\n",m_mouseX,m_mouseY);
             if (m_mouseButtonCallback)
 			{
 				//handledEvent = true;
@@ -915,7 +915,7 @@ void MacOpenGLWindow::startRendering()
 		
         if (([event type]== NSRightMouseUp) || ([ event type]==NSLeftMouseUp)||([event type]==NSOtherMouseUp))
         {
-			// printf("right mouse!");
+			printf("right mouse!");
 			//  float mouseX,mouseY;
             
             NSPoint eventLocation = [event locationInWindow];

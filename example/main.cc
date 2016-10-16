@@ -955,6 +955,10 @@ void keyboardCallback(int keycode, int state) {
   }
 }
 
+void mouseCallback(int button, int state, float x, float y) {
+  printf("hello mouse: button: %d, state: %d, x: %.2f, y: %.2f", button, state, x, y);
+}
+
 std::string ReadJSFile(const char* filename)
 {
   std::ifstream f(filename, std::ifstream::binary);
@@ -1032,6 +1036,7 @@ int main(int argc, char** argv)
 #endif
 
   window->setKeyboardCallback(keyboardCallback);
+  window->setMouseButtonCallback(mouseCallback);
 
   vg = nvgCreateGL2(NVG_ANTIALIAS | NVG_STENCIL_STROKES | NVG_DEBUG);
 
