@@ -12,6 +12,11 @@ bt3gui.SHIFT = 65306;
 bt3gui.CTRL = 65307;
 bt3gui.ALT = 65308;
 
+bt3gui.KEYUP = 0;
+bt3gui.KEYDOWN = 1;
+bt3gui.MOUSEUP = 0;
+bt3gui.MOUSEDOWN = 1;
+
 bt3gui.addEventListener = function(evt_name, fn) {
   var handlers = bt3gui._evt_handlers;
   handlers = handlers[evt_name].push(fn);

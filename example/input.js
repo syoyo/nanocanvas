@@ -10,6 +10,21 @@ var ICON_TRASH = "\uE729"
 this.addEventListener('click', function(evt) {
   print(evt.type + ', ' + evt.clientX + ', ' + evt.button + ', ctrl: ' + evt.ctrlKey + ', alt: ' + evt.altKey + ', shift: ' + evt.shiftKey);
 });
+this.addEventListener('keydown', function(evt) {
+  print('keydown', evt.which, evt.keyCode, evt.charCode);
+});
+this.addEventListener('keyup', function(evt) {
+  print('keyup', evt.which, evt.keyCode, evt.charCode);
+});
+this.addEventListener('keypress', function(evt) {
+  print('keypress', evt.which, evt.keyCode, evt.charCode);
+});
+
+// on ESC, exit
+this.addEventListener('keypress', function(evt) {
+  if (evt.keyCode == 27)
+    bt3gui.setRequestExit();
+});
 
 function isBlack(r, g, b, a) {
   if (r === 0.0 && g === 0.0 && b === 0.0 && a === 0.0) {

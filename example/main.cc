@@ -49,6 +49,10 @@ int mouse_btn_state = 0;
 float mouse_btn_x = 0.0;
 float mouse_btn_y = 0.0;
 
+bool keyboard_btn = false;
+int keyboard_code = 0;
+int keyboard_state = 0;
+
 class timer{
 	public:
 #ifdef _WIN32
@@ -944,6 +948,11 @@ duk_ret_t bt3gui_isModifierKeyPressed(duk_context *ctx) {
   return 1;
 }
 
+duk_ret_t bt3gui_setRequestExit(duk_context *ctx) {
+  window->setRequestExit();
+  return 0;
+}
+
 void decode_test(duk_context* ctx)
 {
   duk_set_top(ctx, 0);
@@ -954,25 +963,9 @@ void decode_test(duk_context* ctx)
 }
 
 void keyboardCallback(int keycode, int state) {
-  printf("hello key %d, state %d(ctrl %d)\n", keycode, state,
-         window->isModifierKeyPressed(B3G_CONTROL));
-  // if (keycode == 'q' && window && window->isModifierKeyPressed(B3G_SHIFT)) {
-  if (keycode == 27) {
-    if (window)
-      window->setRequestExit();
-  } else if (keycode == 9) { // Tab
-    //gTabPressed = (state == 1);
-  } else if (keycode == B3G_SHIFT) { // Shift
-    //gShiftPressed = (state == 1);
-  }
-
-  //ImGui_ImplBtGui_SetKeyState(keycode, (state == 1));
-
-  if (keycode >= 32 && keycode <= 126) {
-    if (state == 1) {
-      //ImGui_ImplBtGui_SetChar(keycode);
-    }
-  }
+  keyboard_btn = true;
+  keyboard_code = keycode;
+  keyboard_state = state;
 }
 
 void mouseButtonCallback(int button, int state, float x, float y) {
@@ -1143,10 +1136,6 @@ int main(int argc, char** argv)
   decode_test(ctx);
 #endif
 
-  printf("ctrl: %d\n", B3G_CONTROL);
-  printf("alt: %d\n", B3G_ALT);
-  printf("shift: %d\n", B3G_SHIFT);
-
   // thin wrapper around bt3gui
   std::string bt3gui_js = ReadJSFile("../example/bt3gui.js");
   if (duk_peval_string(ctx, bt3gui_js.c_str()) != 0) {
@@ -1157,6 +1146,8 @@ int main(int argc, char** argv)
   duk_get_prop_string(ctx, -1 /*index*/, "bt3gui"); // [global, bt3gui]
   duk_push_c_function(ctx, bt3gui_isModifierKeyPressed, /* nargs */1); // [global, bt3gui, isModifierKeyPressed]
   duk_put_prop_string(ctx, -2, "isModifierKeyPressed"); // [global, bt3gui]
+  duk_push_c_function(ctx, bt3gui_setRequestExit, 0);  // [global, bt3gui, setRequestExit]
+  duk_put_prop_string(ctx, -2, "setRequestExit"); // [global, bt3gui]
   duk_pop(ctx); // [global]
   duk_pop(ctx); // []
 
@@ -1215,9 +1206,11 @@ int main(int argc, char** argv)
     }
     duk_pop(ctx);  /* pop result/error */
 
+    // call bt3gui.emit() if mouse or keyboard events have occurred
+    duk_push_global_object(ctx);
+    duk_get_prop_string(ctx, -1 /*index*/, "bt3gui");
+
     if (mouse_btn) {
-      duk_push_global_object(ctx);
-      duk_get_prop_string(ctx, -1 /*index*/, "bt3gui");
       duk_get_prop_string(ctx, -1 /*index*/, "emit");
       duk_push_string(ctx, "mousebutton");
       duk_push_number(ctx, mouse_btn_button);
@@ -1228,9 +1221,23 @@ int main(int argc, char** argv)
           printf("Error: %s\n", duk_safe_to_string(ctx, -1));
       }
       duk_pop(ctx);  /* pop result/error */
-      duk_pop(ctx); /* pop bt3gui namespace */
       mouse_btn = false;
     }
+
+    if (keyboard_btn) {
+      duk_get_prop_string(ctx, -1 /*index*/, "emit");
+      duk_push_string(ctx, "keyboard");
+      duk_push_number(ctx, keyboard_code);
+      duk_push_number(ctx, keyboard_state);
+      if (duk_pcall(ctx, 3 /*nargs*/) != 0) {
+          printf("Error: %s\n", duk_safe_to_string(ctx, -1));
+      }
+      duk_pop(ctx);  /* pop result/error */
+      keyboard_btn = false;
+    }
+
+    duk_pop(ctx); /* pop bt3gui namespace */
+    duk_pop(ctx); /* pop global */
 
     renderGraph(vg, 5,5, &fps);
 

@@ -10,13 +10,13 @@ var button_to_buttons = {
   4: 16
 };
 
-var MOUSE_UP = 0;
-var MOUSE_DOWN = 1;
-
 var handlers = {
-  'mouseup': [],
   'mousedown': [],
-  'click': []
+  'mouseup': [],
+  'click': [],
+  'keydown': [],
+  'keyup': [],
+  'keypress': []
 };
 
 // wrap existing addEventListener, if one exists
@@ -24,7 +24,7 @@ if (this.addEventListener)
   var orig_addEventListener = this.addEventListener;
 
 this.addEventListener = function(evt_name, fn) {
-  if (evt_name == 'mouseup' || evt_name == 'mousedown' || evt_name == 'click')
+  if (evt_name in handlers)
     handlers[evt_name].push(fn);
   else if (orig_addEventListener)
     orig_addEventListener.apply(this, arguments);
@@ -32,33 +32,67 @@ this.addEventListener = function(evt_name, fn) {
 
 bt3gui.addEventListener('mousebutton', function(btn, state, x, y) {
   var evt = {
-    // TODO: implement metaKey boolean
     screenX: x,
     screenY: y,
     clientX: x,
     clientY: y,
     button: btn, // left=0, middle=1, right=2
-    buttons: button_to_buttons[btn], // TODO: detect multiple buttons pressed
-    ctrlKey: bt3gui.isModifierKeyPressed(bt3gui.CTRL),
-    altKey: bt3gui.isModifierKeyPressed(bt3gui.ALT),
-    shiftKey: bt3gui.isModifierKeyPressed(bt3gui.SHIFT)
+    buttons: button_to_buttons[btn] // TODO: detect multiple buttons pressed
   };
+  _setModifiers(evt);
 
-  if (state == MOUSE_DOWN) {
-    evt.type = 'mousedown';
-    handlers.mousedown.forEach(function(fn) {
-      fn(evt);
-    });
+  if (state == bt3gui.MOUSEDOWN) {
+    _nameAndFire('mousedown', evt);
   }
-  else if (state == MOUSE_UP) {
-    evt.type = 'mouseup';
-    handlers.mouseup.forEach(function(fn) {
-      fn(evt);
-    });
-
-    evt.type = 'click';
-    handlers.click.forEach(function(fn) {
-      fn(evt);
-    });
+  else if (state == bt3gui.MOUSEUP) {
+    _nameAndFire('mouseup', evt);
+    _nameAndFire('click', evt);
   }
 });
+
+bt3gui.addEventListener('keyboard', function(code, state) {
+  var keyCode;
+  if (code == 32 || (code >= 48 && code <= 57)) // space & number keys
+    keyCode = code;
+  else if (code >= 97 && code <= 122) // a-z
+    keyCode = code - 32;
+  else
+    keyCode = null; // TODO: implement these (will require research, the other keys aren't a consistent delta)
+
+  var evt = {
+    which: keyCode,
+    keyCode: keyCode,
+    charCode: 0
+  };
+  _setModifiers(evt);
+
+  var keypress_evt = {
+    which: code,
+    keyCode: code,
+    charCode: code
+  };
+  _setModifiers(keypress_evt);
+
+  // TODO: in the browser, if a key is held down then 'keydown' and 'keypress' fire repeatedly
+  if (state == bt3gui.KEYDOWN) {
+    _nameAndFire('keydown', evt);
+    _nameAndFire('keypress', keypress_evt);
+  }
+  else if (state == bt3gui.KEYUP) {
+    _nameAndFire('keyup', evt);
+  }
+});
+
+function _nameAndFire(evt_name, evt) {
+  evt.type = evt_name;
+  handlers[evt.type].forEach(function(fn) {
+    fn(evt);
+  });
+};
+
+function _setModifiers(evt) {
+  // TODO: implement .metaKey (not exposed in bt3gui.isModifierKeyPressed)
+  evt.ctrlKey = bt3gui.isModifierKeyPressed(bt3gui.CTRL);
+  evt.altKey = bt3gui.isModifierKeyPressed(bt3gui.ALT);
+  evt.shiftKey = bt3gui.isModifierKeyPressed(bt3gui.SHIFT);
+}
