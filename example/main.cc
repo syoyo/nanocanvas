@@ -938,6 +938,12 @@ duk_ret_t print_name(duk_context *ctx)
   return 0;
 }
 
+duk_ret_t bt3gui_isModifierKeyPressed(duk_context *ctx) {
+  int modifier_key = duk_to_int(ctx, 0);
+  duk_push_boolean(ctx, window->isModifierKeyPressed(modifier_key));
+  return 1;
+}
+
 void decode_test(duk_context* ctx)
 {
   duk_set_top(ctx, 0);
@@ -970,8 +976,6 @@ void keyboardCallback(int keycode, int state) {
 }
 
 void mouseButtonCallback(int button, int state, float x, float y) {
-  printf("hello mouse: button: %d, state: %d, x: %.2f, y: %.2f\n", button, state, x, y);
-  
   mouse_btn = true;
   mouse_btn_button = button;
   mouse_btn_state = state;
@@ -980,7 +984,7 @@ void mouseButtonCallback(int button, int state, float x, float y) {
 }
 
 void mouseMoveCallback(float x, float y) {
-  printf("mouse move, x: %.2f, y: %.2f\n", x, y);
+  //printf("mouse move, x: %.2f, y: %.2f\n", x, y);
 }
 
 std::string ReadJSFile(const char* filename)
@@ -1139,12 +1143,22 @@ int main(int argc, char** argv)
   decode_test(ctx);
 #endif
 
-  // eval the bt3gui event-handling JS
+  printf("ctrl: %d\n", B3G_CONTROL);
+  printf("alt: %d\n", B3G_ALT);
+  printf("shift: %d\n", B3G_SHIFT);
+
+  // thin wrapper around bt3gui
   std::string bt3gui_js = ReadJSFile("../example/bt3gui.js");
   if (duk_peval_string(ctx, bt3gui_js.c_str()) != 0) {
     printf("bt3gui eval failed: %s\n", duk_safe_to_string(ctx, -1));
     exit(-1);
   }
+  duk_push_global_object(ctx); // [global]
+  duk_get_prop_string(ctx, -1 /*index*/, "bt3gui"); // [global, bt3gui]
+  duk_push_c_function(ctx, bt3gui_isModifierKeyPressed, /* nargs */1); // [global, bt3gui, isModifierKeyPressed]
+  duk_put_prop_string(ctx, -2, "isModifierKeyPressed"); // [global, bt3gui]
+  duk_pop(ctx); // [global]
+  duk_pop(ctx); // []
 
   // eval the bt3-browser-shim (simulates browser events)
   std::string bt3_browser_shim = ReadJSFile("../example/bt3-browser-shim.js");

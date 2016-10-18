@@ -32,13 +32,16 @@ this.addEventListener = function(evt_name, fn) {
 
 bt3gui.addEventListener('mousebutton', function(btn, state, x, y) {
   var evt = {
-    // TODO: implement altKey, ctrlKey, shiftKey, metaKey booleans
+    // TODO: implement metaKey boolean
     screenX: x,
     screenY: y,
     clientX: x,
     clientY: y,
     button: btn, // left=0, middle=1, right=2
-    buttons: button_to_buttons[btn] // TODO: detect multiple buttons pressed
+    buttons: button_to_buttons[btn], // TODO: detect multiple buttons pressed
+    ctrlKey: bt3gui.isModifierKeyPressed(bt3gui.CTRL),
+    altKey: bt3gui.isModifierKeyPressed(bt3gui.ALT),
+    shiftKey: bt3gui.isModifierKeyPressed(bt3gui.SHIFT)
   };
 
   if (state == MOUSE_DOWN) {

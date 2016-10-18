@@ -8,7 +8,7 @@ var ICON_LOGIN = "\uE740"
 var ICON_TRASH = "\uE729"
 
 this.addEventListener('click', function(evt) {
-  print(evt.type + ', ' + evt.clientX + ', ' + evt.button);
+  print(evt.type + ', ' + evt.clientX + ', ' + evt.button + ', ctrl: ' + evt.ctrlKey + ', alt: ' + evt.altKey + ', shift: ' + evt.shiftKey);
 });
 
 function isBlack(r, g, b, a) {
