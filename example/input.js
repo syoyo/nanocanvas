@@ -7,6 +7,10 @@ var ICON_CHECK = "\u2713"
 var ICON_LOGIN = "\uE740"
 var ICON_TRASH = "\uE729"
 
+bt3gui.addEventListener('mousebutton', function(btn, state, x, y) {
+  print(btn + ', ' + state + ', ' + x + ', ' + y);
+});
+
 function isBlack(r, g, b, a) {
   if (r === 0.0 && g === 0.0 && b === 0.0 && a === 0.0) {
     return true;

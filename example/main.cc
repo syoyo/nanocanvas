@@ -987,6 +987,7 @@ std::string ReadJSFile(const char* filename)
 {
   std::ifstream f(filename, std::ifstream::binary);
   if (!f) {
+    printf("File not found %s\n", filename);
     return std::string();
   }
 
@@ -1138,6 +1139,14 @@ int main(int argc, char** argv)
   decode_test(ctx);
 #endif
 
+  // eval the bt3gui event-handling JS
+  std::string bt3gui_js = ReadJSFile("../example/bt3gui.js");
+  if (duk_peval_string(ctx, bt3gui_js.c_str()) != 0) {
+    printf("bt3gui eval failed: %s\n", duk_safe_to_string(ctx, -1));
+    exit(-1);
+  }
+
+  // eval the user's JS file
   if (duk_peval_string(ctx, js.c_str()) != 0) {
     printf("eval failed: %s\n", duk_safe_to_string(ctx, -1));
     exit(-1);
@@ -1187,15 +1196,18 @@ int main(int argc, char** argv)
 
     if (mouse_btn) {
       duk_push_global_object(ctx);
-      duk_get_prop_string(ctx, -1 /*index*/, "onClick");
+      duk_get_prop_string(ctx, -1 /*index*/, "bt3gui");
+      duk_get_prop_string(ctx, -1 /*index*/, "emit");
+      duk_push_string(ctx, "mousebutton");
       duk_push_number(ctx, mouse_btn_button);
       duk_push_number(ctx, mouse_btn_state);
       duk_push_number(ctx, mouse_btn_x);
       duk_push_number(ctx, mouse_btn_y);
-      if (duk_pcall(ctx, 4 /*nargs*/) != 0) {
+      if (duk_pcall(ctx, 5 /*nargs*/) != 0) {
           printf("Error: %s\n", duk_safe_to_string(ctx, -1));
       }
       duk_pop(ctx);  /* pop result/error */
+      duk_pop(ctx); /* pop bt3gui namespace */
       mouse_btn = false;
     }
 
