@@ -1146,6 +1146,13 @@ int main(int argc, char** argv)
     exit(-1);
   }
 
+  // eval the bt3-browser-shim (simulates browser events)
+  std::string bt3_browser_shim = ReadJSFile("../example/bt3-browser-shim.js");
+  if (duk_peval_string(ctx, bt3_browser_shim.c_str()) != 0) {
+    printf("bt3-browser-shim eval failed: %s\n", duk_safe_to_string(ctx, -1));
+    exit(-1);
+  }
+
   // eval the user's JS file
   if (duk_peval_string(ctx, js.c_str()) != 0) {
     printf("eval failed: %s\n", duk_safe_to_string(ctx, -1));
