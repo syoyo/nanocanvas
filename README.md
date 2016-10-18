@@ -50,11 +50,17 @@ See `example/main.cc` and `example/input.js`.
 NanoCanvas example code is licensed under MIT license.
 NanoCanvas uses third party libraries. See `LICENSES` file for more details.
 
+### Games example
+
+Game assets are by Hyptosis. Licensed under CC-BY 3.0.
+http://opengameart.org/content/lots-of-free-2d-tiles-and-sprites-by-hyptosis
+
 ## TODO
 
+* [ ] More HTML5 compatible APIs.
 * [ ] Expressive error handling.
 * [ ] Expressive error report of parsing JavaScript code.
 * [ ] Refactor source code.
 * [ ] Text paragraph
-* [ ] Mouse interaction
+* [x] Mouse interaction
 
