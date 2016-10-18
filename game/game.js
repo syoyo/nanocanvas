@@ -38,14 +38,10 @@ function onQuit() {
   gImages = [];
 }
 
-var STATE_UP = 0;
-var STATE_DOWN = 1;
-function onClick(btn, state, x, y) {
-  if (state == STATE_UP) {
-    me.target_x = x;
-    me.target_y = y;
-  }
-}
+this.addEventListener('click', function(evt) {
+  me.target_x = evt.clientX;
+  me.target_y = evt.clientY;
+});
 
 function onDraw() {
   try {
