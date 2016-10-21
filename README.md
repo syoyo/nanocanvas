@@ -45,12 +45,22 @@ Visual Studio 2013 may work. To compile with Visual Studio 2013 use the followin
 
 See `example/main.cc` and `example/input.js`.
 
+### NanoVG demo
+
+    $ cd build
+    $ ./example
+
+### Game demo
+
+    $ cd build
+    $ ./example ../game/game.js
+
 ## License
 
 NanoCanvas example code is licensed under MIT license.
 NanoCanvas uses third party libraries. See `LICENSES` file for more details.
 
-### Games example
+### Game example
 
 Game assets are by Hyptosis. Licensed under CC-BY 3.0.
 http://opengameart.org/content/lots-of-free-2d-tiles-and-sprites-by-hyptosis
