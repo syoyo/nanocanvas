@@ -141,6 +141,7 @@ enum NVGimageFlags {
 	NVG_IMAGE_REPEATY			= 1<<2,		// Repeat image in Y direction.
 	NVG_IMAGE_FLIPY				= 1<<3,		// Flips (inverses) image in Y direction when rendered.
 	NVG_IMAGE_PREMULTIPLIED		= 1<<4,		// Image data has premultiplied alpha.
+	NVG_IMAGE_NEAREST			= 1<<5,		// Image interpolation is Nearest instead Linear
 };
 
 // Begin drawing a new frame
@@ -151,7 +152,7 @@ enum NVGimageFlags {
 // For example, GLFW returns two dimension for an opened window: window size and
 // frame buffer size. In that case you would set windowWidth/Height to the window size
 // devicePixelRatio to: frameBufferWidth / windowWidth.
-void nvgBeginFrame(NVGcontext* ctx, int windowWidth, int windowHeight, float devicePixelRatio);
+void nvgBeginFrame(NVGcontext* ctx, float windowWidth, float windowHeight, float devicePixelRatio);
 
 // Cancels drawing the current frame.
 void nvgCancelFrame(NVGcontext* ctx);
@@ -236,6 +237,9 @@ void nvgReset(NVGcontext* ctx);
 // using nvgLinearGradient(), nvgBoxGradient(), nvgRadialGradient() and nvgImagePattern().
 //
 // Current render style can be saved and restored using nvgSave() and nvgRestore().
+
+// Sets whether to draw antialias for nvgStroke() and nvgFill(). It's enabled by default.
+void nvgShapeAntiAlias(NVGcontext* ctx, int enabled);
 
 // Sets current stroke style to a solid color.
 void nvgStrokeColor(NVGcontext* ctx, NVGcolor color);
@@ -410,7 +414,7 @@ NVGpaint nvgBoxGradient(NVGcontext* ctx, float x, float y, float w, float h,
 NVGpaint nvgRadialGradient(NVGcontext* ctx, float cx, float cy, float inr, float outr,
 						   NVGcolor icol, NVGcolor ocol);
 
-// Creates and returns an image patter. Parameters (ox,oy) specify the left-top location of the image pattern,
+// Creates and returns an image pattern. Parameters (ox,oy) specify the left-top location of the image pattern,
 // (ex,ey) the size of one image, angle rotation around the top-left corner, image is handle to the image to render.
 // The gradient is transformed by the current transform when it is passed to nvgFillPaint() or nvgStrokePaint().
 NVGpaint nvgImagePattern(NVGcontext* ctx, float ox, float oy, float ex, float ey,
@@ -533,7 +537,7 @@ void nvgStroke(NVGcontext* ctx);
 //		const char* txt = "Text me up.";
 //		nvgTextBounds(vg, x,y, txt, NULL, bounds);
 //		nvgBeginPath(vg);
-//		nvgRoundedRect(vg, bounds[0],bounds[1], bounds[2]-bounds[0], bounds[3]-bounds[1]);
+//		nvgRect(vg, bounds[0],bounds[1], bounds[2]-bounds[0], bounds[3]-bounds[1]);
 //		nvgFill(vg);
 //
 // Note: currently only solid color fill is supported for text.
@@ -542,9 +546,15 @@ void nvgStroke(NVGcontext* ctx);
 // Returns handle to the font.
 int nvgCreateFont(NVGcontext* ctx, const char* name, const char* filename);
 
+// fontIndex specifies which font face to load from a .ttf/.ttc file.
+int nvgCreateFontAtIndex(NVGcontext* ctx, const char* name, const char* filename, const int fontIndex);
+
 // Creates font by loading it from the specified memory chunk.
 // Returns handle to the font.
 int nvgCreateFontMem(NVGcontext* ctx, const char* name, unsigned char* data, int ndata, int freeData);
+
+// fontIndex specifies which font face to load from a .ttf/.ttc file.
+int nvgCreateFontMemAtIndex(NVGcontext* ctx, const char* name, unsigned char* data, int ndata, int freeData, const int fontIndex);
 
 // Finds a loaded font of specified name, and returns handle to it, or -1 if the font is not found.
 int nvgFindFont(NVGcontext* ctx, const char* name);
@@ -554,6 +564,12 @@ int nvgAddFallbackFontId(NVGcontext* ctx, int baseFont, int fallbackFont);
 
 // Adds a fallback font by name.
 int nvgAddFallbackFont(NVGcontext* ctx, const char* baseFont, const char* fallbackFont);
+
+// Resets fallback fonts by handle.
+void nvgResetFallbackFontsId(NVGcontext* ctx, int baseFont);
+
+// Resets fallback fonts by name.
+void nvgResetFallbackFonts(NVGcontext* ctx, const char* baseFont);
 
 // Sets the font size of current text style.
 void nvgFontSize(NVGcontext* ctx, float size);
@@ -649,12 +665,12 @@ struct NVGparams {
 	int (*renderDeleteTexture)(void* uptr, int image);
 	int (*renderUpdateTexture)(void* uptr, int image, int x, int y, int w, int h, const unsigned char* data);
 	int (*renderGetTextureSize)(void* uptr, int image, int* w, int* h);
-	void (*renderViewport)(void* uptr, int width, int height, float devicePixelRatio);
+	void (*renderViewport)(void* uptr, float width, float height, float devicePixelRatio);
 	void (*renderCancel)(void* uptr);
-	void (*renderFlush)(void* uptr, NVGcompositeOperationState compositeOperation);
-	void (*renderFill)(void* uptr, NVGpaint* paint, NVGscissor* scissor, float fringe, const float* bounds, const NVGpath* paths, int npaths);
-	void (*renderStroke)(void* uptr, NVGpaint* paint, NVGscissor* scissor, float fringe, float strokeWidth, const NVGpath* paths, int npaths);
-	void (*renderTriangles)(void* uptr, NVGpaint* paint, NVGscissor* scissor, const NVGvertex* verts, int nverts);
+	void (*renderFlush)(void* uptr);
+	void (*renderFill)(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, const float* bounds, const NVGpath* paths, int npaths);
+	void (*renderStroke)(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, float strokeWidth, const NVGpath* paths, int npaths);
+	void (*renderTriangles)(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, const NVGvertex* verts, int nverts, float fringe);
 	void (*renderDelete)(void* uptr);
 };
 typedef struct NVGparams NVGparams;
